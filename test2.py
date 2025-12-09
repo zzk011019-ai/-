@@ -141,16 +141,30 @@ print(f"Network metrics saved to {out_file}")
 
 # --------- Run Experiment 2: Retrieval ---------
 print("\n===== Experiment 2: Retrieval (Simplified & Traditional, traditional->simplified) =====")
-pred_ids, recall = experiment_retrieval(
-    corpus_dir=tmp_dir,
-    queries_path=queries_path,
-    qrels_path=qrels_path,
-    convert='t2s',  # traditional->simplified
-    encoder_name='sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2',
-    k=5,
-    sample=None
-)
-print("Recall@5:", recall)
-print("Predicted top docs per query:", json.dumps(pred_ids, ensure_ascii=False, indent=2))
+# 通过循环计算多个k值
+k_values = range(1, 11)
+directions = ['t2s', 's2t']  # 两种转换方向
+recall_results = {direction: {} for direction in directions}
 
-print("\nTemporary data stored in:", tmp_dir)
+# 运行检索实验
+for direction in directions:
+    print(f"\n----- Testing {direction} direction -----")
+    for k in k_values:
+        pred_ids, recall = experiment_retrieval(
+            corpus_dir=tmp_dir,
+            queries_path=queries_path,
+            qrels_path=qrels_path,
+            convert=direction,
+            encoder_name='sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2',
+            k=k,
+            sample=None
+        )
+        recall_results[direction][k] = recall
+        print(f"Recall@{k} for {direction}: {recall}")
+
+# 保存检索结果
+recall_results_path = os.path.join(tmp_dir, "recall_curve_two_directions.json")
+with open(recall_results_path, "w") as f:
+    json.dump(recall_results, f, indent=2)
+
+print(f"\nRecall results saved to {recall_results_path}")
